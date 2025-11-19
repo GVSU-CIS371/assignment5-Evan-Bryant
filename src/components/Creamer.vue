@@ -1,10 +1,17 @@
 <template>
-  <div class="froth">
-    <div v-for=" in 5" class="foam"></div>
+  <div class="froth" :style="{ backgroundColor: color, height: height + '%' }">
+    <div v-for="n in 5" :key="n" class="foam"></div>
   </div>
+  
 </template>
 
-<script setup lang="ts"></script>
+<script setup lang="ts">
+type Props = {
+  color: string;
+  height: number;
+};
+defineProps<Props>();
+</script>
 <style lang="scss" scoped>
 .froth {
   overflow: visible;
