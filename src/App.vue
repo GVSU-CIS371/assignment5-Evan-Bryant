@@ -1,128 +1,159 @@
 <template>
-  <div>
-    <Beverage :isIced="beverageStore.currentTemp === 'Cold'" />
+  <div class="app">
+    <div v-if="beverageStore.currentBase && beverageStore.currentCreamer && beverageStore.currentSyrup">
+      <Beverage
+        :isIced="beverageStore.isIced"
+        :base="beverageStore.currentBase"
+        :creamer="beverageStore.currentCreamer"
+        :syrup="beverageStore.currentSyrup"
+      />
 
-    <ul>
-      <li>
-        <template v-for="temp in beverageStore.temps" :key="temp">
-          <label>
-            <input
-              type="radio"
-              name="temperature"
-              :id="`r${temp}`"
-              :value="temp"
-              v-model="beverageStore.currentTemp"
-            />
-            {{ temp }}
-          </label>
-        </template>
-      </li>
-    </ul>
+      <div class="temps">
+        <label v-for="temp in beverageStore.temps" :key="temp" class="temp-option">
+          <input type="radio" name="temperature" :value="temp" v-model="selectedTemp" />
+          {{ temp }}
+        </label>
+      </div>
 
-    <ul>
-      <li>
-        <template v-for="b in beverageStore.bases" :key="b.id">
-          <label>
-            <input
-              type="radio"
-              name="bases"
-              :id="`r${b.id}`"
-              :value="b"
-              v-model="beverageStore.currentBase"
-            />
-            {{ b.name }}
-          </label>
-        </template>
-      </li>
-    </ul>
+      <div class="controls">
+        <div class="control">
+          <label for="base">Base Beverage</label>
+          <select id="base" v-model="selectedBaseId">
+            <option v-for="b in beverageStore.bases" :key="b.id" :value="b.id">
+              {{ b.name }}
+            </option>
+          </select>
+        </div>
+        <div class="control">
+          <label for="creamer">Creamer</label>
+          <select id="creamer" v-model="selectedCreamerId">
+            <option v-for="c in beverageStore.creamers" :key="c.id" :value="c.id">
+              {{ c.name }}
+            </option>
+          </select>
+        </div>
+        <div class="control">
+          <label for="syrup">Syrup</label>
+          <select id="syrup" v-model="selectedSyrupId">
+            <option v-for="s in beverageStore.syrups" :key="s.id" :value="s.id">
+              {{ s.name }}
+            </option>
+          </select>
+        </div>
+      </div>
 
-    <ul>
-      <li>
-        <template v-for="s in beverageStore.syrups" :key="s.id">
-          <label>
-            <input
-              type="radio"
-              name="syrups"
-              :id="`r${s.id}`"
-              :value="s"
-              v-model="beverageStore.currentSyrup"
-            />
-            {{ s.name }}
-          </label>
-        </template>
-      </li>
-    </ul>
-
-    <ul>
-      <li>
-        <template v-for="c in beverageStore.creamers" :key="c.id">
-          <label>
-            <input
-              type="radio"
-              name="creamers"
-              :id="`r${c.id}`"
-              :value="c"
-              v-model="beverageStore.currentCreamer"
-            />
-            {{ c.name }}
-          </label>
-        </template>
-      </li>
-    </ul>
-
-    <div class="auth-row">
-      <button @click="withGoogle">Sign in with Google</button>
+      <div class="name-row">
+        <div class="control beverage-name">
+          <label for="beverageName">Beverage Name</label>
+          <input
+            id="beverageName"
+            type="text"
+            v-model="newBeverageName"
+            placeholder="Enter a name"
+            @keyup.enter="handleMakeBeverage"
+          />
+        </div>
+        <div class="control make-beverage">
+          <button @click="handleMakeBeverage">Make Beverage</button>
+        </div>
+      </div>
     </div>
-    <input
-      v-model="beverageStore.currentName"
-      type="text"
-      placeholder="Beverage Name"
-    />
-
-    <button @click="handleMakeBeverage">🍺 Make Beverage</button>
-
-    <p v-if="message" class="status-message">
-      {{ message }}
-    </p>
+    <div v-else>Loading beverages...</div>
   </div>
 
-  <div style="margin-top: 20px">
-    <template v-for="beverage in beverageStore.beverages" :key="beverage.id">
-      <input
-        type="radio"
-        :id="beverage.id"
-        :value="beverage"
-        v-model="beverageStore.currentBeverage"
-        @change="beverageStore.showBeverage()"
-      />
-      <label :for="beverage.id">{{ beverage.name }}</label>
-    </template>
+  <div id="beverage-container">
+    <div v-if="beverageStore.beverages.length === 0">No beverages yet.</div>
+    <div v-else>
+      <div v-for="bev in beverageStore.beverages" :key="bev.id" class="beverage-option">
+        <label>
+          <input
+            type="radio"
+            name="saved-beverage"
+            :checked="isCurrentSelection(bev)"
+            @change="beverageStore.showBeverage(bev)"
+          />
+          {{ bev.name }}
+        </label>
+      </div>
+    </div>
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref } from "vue";
+<script lang="ts">
+import { defineComponent } from "vue";
 import Beverage from "./components/Beverage.vue";
 import { useBeverageStore } from "./stores/beverageStore";
+import type { BeverageType } from "./types/beverage";
 
-const beverageStore = useBeverageStore();
-beverageStore.init();
-
-const message = ref("");
-
-const showMessage = (txt: string) => {
-  message.value = txt;
-  setTimeout(() => {
-    message.value = "";
-  }, 5000);
-};
-
-const withGoogle = async () => {};
-
-const handleMakeBeverage = () => {
-  const txt = beverageStore.makeBeverage();
-  showMessage(txt);
-};
+export default defineComponent({
+  name: "App",
+  components: {
+    Beverage,
+  },
+  data() {
+    return {
+      newBeverageName: "",
+    };
+  },
+  computed: {
+    beverageStore(): ReturnType<typeof useBeverageStore> {
+      return useBeverageStore();
+    },
+    selectedBaseId: {
+      get(): string {
+        return this.beverageStore.currentBase?.id || "";
+      },
+      set(value: string) {
+        const base = this.beverageStore.bases.find((b) => b.id === value) || null;
+        this.beverageStore.currentBase = base;
+      },
+    },
+    selectedCreamerId: {
+      get(): string {
+        return this.beverageStore.currentCreamer?.id || "";
+      },
+      set(value: string) {
+        const creamer = this.beverageStore.creamers.find((c) => c.id === value) || null;
+        this.beverageStore.currentCreamer = creamer;
+      },
+    },
+    selectedSyrupId: {
+      get(): string {
+        return this.beverageStore.currentSyrup?.id || "";
+      },
+      set(value: string) {
+        const syrup = this.beverageStore.syrups.find((s) => s.id === value) || null;
+        this.beverageStore.currentSyrup = syrup;
+      },
+    },
+    selectedTemp: {
+      get(): string {
+        return this.beverageStore.currentTemp || "";
+      },
+      set(value: string) {
+        this.beverageStore.currentTemp = value;
+      },
+    },
+  },
+  methods: {
+    handleMakeBeverage() {
+      const cleanName = this.newBeverageName.trim();
+      if (!cleanName) {
+        return;
+      }
+      this.beverageStore.makeBeverage(cleanName);
+      this.newBeverageName = "";
+    },
+    isCurrentSelection(beverage: BeverageType) {
+      return (
+        this.beverageStore.currentBase?.id === beverage.base.id &&
+        this.beverageStore.currentCreamer?.id === beverage.creamer.id &&
+        this.beverageStore.currentSyrup?.id === beverage.syrup.id &&
+        this.beverageStore.currentTemp === beverage.temp
+      );
+    },
+  },
+});
 </script>
 
 <style lang="scss">
@@ -136,6 +167,7 @@ html {
   background-color: #6e4228;
   background: linear-gradient(to bottom, #6e4228 0%, #956f5a 100%);
 }
+<<<<<<< HEAD
 
 ul {
   list-style: none;
@@ -168,5 +200,63 @@ ul {
   border: 1px solid #ffeeba;
   color: #856404;
   font-size: 0.9rem;
+=======
+ul {
+  list-style: none;
+}
+</style>
+
+<style scoped>
+.app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+.controls {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1rem;
+}
+.temps {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1rem;
+}
+.temp-option {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  align-items: flex-start;
+}
+.make-beverage {
+  margin-top: 1rem;
+}
+.name-row {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+  margin-top: 1rem;
+}
+.name-row input {
+  padding: 0.25rem 0.5rem;
+  min-width: 220px;
+}
+select {
+  padding: 0.25rem 0.5rem;
+}
+#beverage-container {
+  margin-top: 1.5rem;
+}
+.beverage-option {
+  margin-bottom: 0.5rem;
+>>>>>>> a4/main
 }
 </style>
